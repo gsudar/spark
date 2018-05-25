@@ -330,6 +330,30 @@ private[spark] class AppStatusListener(
         newRDDOperationCluster(graph.rootCluster))
       kvstore.write(uigraph)
     }
+
+    event.stageInfos.foreach { stageInfo =>
+      event.stageInfos.filter(s => s.stageId != stageInfo.stageId).foreach { stageInfoOther =>
+        val g = kvstore.read(classOf[RDDOperationGraphWrapper],
+          stageInfoOther.stageId).
+          toRDDOperationGraph()
+        g.incomingEdges.foreach { e =>
+          if (stageInfo.rddInfos.exists(rdd => rdd.id == e.fromId) && e.fromStageId == -1) {
+            g.incomingEdges = g.incomingEdges :+
+              (new RDDOperationEdge(e.fromId, e.toId, stageInfo.stageId))
+          }
+        }
+
+        val updatedGraph = new RDDOperationGraphWrapper(
+          stageInfoOther.stageId,
+          g.edges,
+          g.outgoingEdges,
+          g.incomingEdges,
+          newRDDOperationCluster(g.rootCluster)
+        )
+        kvstore.write(updatedGraph)
+      }
+    }
+
   }
 
   private def newRDDOperationCluster(cluster: RDDOperationCluster): RDDOperationClusterWrapper = {

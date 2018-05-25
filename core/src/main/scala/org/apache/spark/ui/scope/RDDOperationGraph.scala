@@ -38,7 +38,7 @@ import org.apache.spark.storage.StorageLevel
 private[spark] case class RDDOperationGraph(
     edges: Seq[RDDOperationEdge],
     outgoingEdges: Seq[RDDOperationEdge],
-    incomingEdges: Seq[RDDOperationEdge],
+    var incomingEdges: Seq[RDDOperationEdge],
     rootCluster: RDDOperationCluster)
 
 /** A node in an RDDOperationGraph. This represents an RDD. */
@@ -48,7 +48,7 @@ private[spark] case class RDDOperationNode(id: Int, name: String, cached: Boolea
  * A directed edge connecting two nodes in an RDDOperationGraph.
  * This represents an RDD dependency.
  */
-private[spark] case class RDDOperationEdge(fromId: Int, toId: Int)
+private[spark] case class RDDOperationEdge(fromId: Int, toId: Int, fromStageId: Int)
 
 /**
  * A cluster that groups nodes together in an RDDOperationGraph.
@@ -136,7 +136,8 @@ private[spark] object RDDOperationGraph extends Logging {
 
       if (isAllowed) {
         addRDDIds += rdd.id
-        edges ++= parentIds.filter(id => !dropRDDIds.contains(id)).map(RDDOperationEdge(_, rdd.id))
+        edges ++= parentIds.filter(id => !dropRDDIds.contains(id))
+          .map(RDDOperationEdge(_, rdd.id, -1))
       } else {
         dropRDDIds += rdd.id
       }
