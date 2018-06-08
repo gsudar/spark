@@ -444,13 +444,8 @@ function connectRDDs(fromRDDId, toRDDId, fromStageId, edgesContainer, svgContain
   var fromNodeId = VizConstants.nodePrefix + fromRDDId;
   var fromPos
   var toNodeId = VizConstants.nodePrefix + toRDDId;
-  if (fromStageId == -1) {
-    fromPos = getAbsolutePosition(svgContainer.select("g." + fromNodeId));
-  }
-  else
-  {
-    fromPos = getAbsolutePosition(svgContainer.select("#"+ VizConstants.graphPrefix + fromStageId + "> g > g.nodes > g." + VizConstants.nodePrefix + fromRDDId))
-  }
+  (fromStageId == "null") ? (fromPos = getAbsolutePosition(svgContainer.select("g." + fromNodeId))) :
+    (fromPos = getAbsolutePosition(svgContainer.select("#"+ VizConstants.graphPrefix + fromStageId + "> g > g.nodes > g." + VizConstants.nodePrefix + fromRDDId)))
 
   var toPos = getAbsolutePosition(svgContainer.select("g." + toNodeId));
 

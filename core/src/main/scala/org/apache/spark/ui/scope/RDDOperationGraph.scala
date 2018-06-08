@@ -48,7 +48,12 @@ private[spark] case class RDDOperationNode(id: Int, name: String, cached: Boolea
  * A directed edge connecting two nodes in an RDDOperationGraph.
  * This represents an RDD dependency.
  */
-private[spark] case class RDDOperationEdge(fromId: Int, toId: Int, fromStageId: Int)
+private[spark] case class RDDOperationEdge(
+                                            fromId: Int,
+                                            toId: Int,
+                                            fromStageId: Option[Int] = None) {
+  def this(fromId: Int, toId: Int, fromStageId: Int) = this(fromId, toId, Some(fromStageId))
+}
 
 /**
  * A cluster that groups nodes together in an RDDOperationGraph.
@@ -136,8 +141,8 @@ private[spark] object RDDOperationGraph extends Logging {
 
       if (isAllowed) {
         addRDDIds += rdd.id
-        edges ++= parentIds.filter(id => !dropRDDIds.contains(id))
-          .map(RDDOperationEdge(_, rdd.id, -1))
+        edges ++= parentIds.filter(!dropRDDIds.contains(_))
+          .map(RDDOperationEdge(_, rdd.id))
       } else {
         dropRDDIds += rdd.id
       }
@@ -196,7 +201,6 @@ private[spark] object RDDOperationGraph extends Logging {
         case _ => logWarning(s"Found an orphan edge in stage ${stage.stageId}: $e")
       }
     }
-
     RDDOperationGraph(internalEdges, outgoingEdges, incomingEdges, rootCluster)
   }
 

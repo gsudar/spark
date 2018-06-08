@@ -322,22 +322,21 @@ private[spark] class AppStatusListener(
     // Create the graph data for all the job's stages.
     event.stageInfos.foreach { stage =>
       val graph = RDDOperationGraph.makeOperationGraph(stage, maxGraphRootNodes)
-      val uigraph = new RDDOperationGraphWrapper(
+      kvstore.write(new RDDOperationGraphWrapper(
         stage.stageId,
         graph.edges,
         graph.outgoingEdges,
         graph.incomingEdges,
-        newRDDOperationCluster(graph.rootCluster))
-      kvstore.write(uigraph)
+        newRDDOperationCluster(graph.rootCluster)))
     }
 
     event.stageInfos.foreach { stageInfo =>
-      event.stageInfos.filter(s => s.stageId != stageInfo.stageId).foreach { stageInfoOther =>
+      event.stageInfos.filter(_.stageId != stageInfo.stageId).foreach { stageInfoOther =>
         val g = kvstore.read(classOf[RDDOperationGraphWrapper],
-          stageInfoOther.stageId).
-          toRDDOperationGraph()
-        g.incomingEdges.foreach { e =>
-          if (stageInfo.rddInfos.exists(rdd => rdd.id == e.fromId) && e.fromStageId == -1) {
+          stageInfoOther.stageId).toRDDOperationGraph()
+
+        g.incomingEdges.distinct.foreach { e =>
+          if (stageInfo.rddInfos.exists(rdd => rdd.id == e.fromId) && e.fromStageId.isEmpty) {
             g.incomingEdges = g.incomingEdges :+
               (new RDDOperationEdge(e.fromId, e.toId, stageInfo.stageId))
           }
@@ -353,7 +352,6 @@ private[spark] class AppStatusListener(
         kvstore.write(updatedGraph)
       }
     }
-
   }
 
   private def newRDDOperationCluster(cluster: RDDOperationCluster): RDDOperationClusterWrapper = {
